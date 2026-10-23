@@ -1,0 +1,67 @@
+name: mac-kit-test
+on: workflow_dispatch
+jobs:
+  kit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, macos-15, macos-14, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      TERM: xterm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Static checks (syntax; no installer-stub commands such as python3, git or xcrun in the kit)
+        run: |
+          set -e
+          for f in macos/START-HERE-MAC.command macos/mac-tools/*.zsh mac/copy-to-usb.sh; do zsh -n "$f"; echo "syntax ok: $f"; done
+          for f in macos/mac-tools/*.js; do osascript -l JavaScript -e "ObjC.import('Foundation'); new Function(\$.NSString.stringWithContentsOfFileEncodingError('$f',4,null).js); 'compiles: $f'"; done
+          if grep -nE '(^|[;&|(]|\$\(|then|do|else)[[:space:]]*(python3?|git|xcrun|make|swift)[[:space:]]' macos/START-HERE-MAC.command macos/mac-tools/*; then echo "FAIL: kit calls a command that is only an installer stub on family Macs"; exit 1; fi
+          sw_vers; uname -m
+      - name: Profiles reader understands a hijack profile, a VPN and Screen Time
+        run: |
+          out=$(osascript -l JavaScript macos/mac-tools/inspect.js profiles test/sample-profiles.xml)
+          echo "$out"
+          echo "$out" | grep -q $'^_computerLevel\tcom.searchmarquis.chrome\t.*com.google.Chrome:HomepageLocation+DefaultSearchProviderSearchURL'
+          echo "PASS hijack profile seen"
+          echo "$out" | grep -qE $'^_computerLevel\tcom.example.vpn\t[^\t]*\t[^\t]*\tcom.apple.vpn.managed\t$'
+          echo "PASS VPN profile has no browser settings"
+          echo "$out" | grep -q 'com.apple.ManagedSettings.macOS.1234'
+          echo "PASS Screen Time profile listed (the kit skips com.apple.*)"
+      - name: Pretend USB drive (exFAT) and the copy script
+        run: |
+          set -e
+          hdiutil create -size 2g -fs ExFAT -volname USB -o "$RUNNER_TEMP/usb.dmg"
+          hdiutil attach "$RUNNER_TEMP/usb.dmg"
+          mkdir -p tools; for f in START-HERE.bat READ-ME.txt tools/Clean-Laptop.ps1 tools/Common.ps1 tools/After-Restart.ps1 tools/Find-Unwanted.ps1; do echo "windows stub" > "$f"; done
+          bash mac/copy-to-usb.sh /Volumes/USB | tee copy.txt
+          test "$(grep -c '^OK ' copy.txt)" = 13
+      - name: Plant what the kit must remove and what it must keep
+        run: zsh test/plant-mac.zsh 2>&1 | tee plant.txt
+      - name: Run the kit from the drive (as a person would, minus the double-click)
+        timeout-minutes: 60
+        run: KIT_TEST=1 zsh /Volumes/USB/START-HERE-MAC.command 2>&1 | tee kit-run.txt
+      - name: Verify
+        run: |
+          zsh test/verify-mac.zsh /Volumes/USB 2>&1 | tee verify.txt
+          echo "PASS: $(grep -c '^PASS' verify.txt)  FAIL: $(grep -c '^FAIL' verify.txt)"
+          ! grep -q '^FAIL' verify.txt
+      - name: Second run finds nothing new
+        if: always()
+        timeout-minutes: 40
+        run: |
+          KIT_TEST=1 zsh /Volumes/USB/START-HERE-MAC.command > kit-run2.txt 2>&1
+          r=$(ls -td /Volumes/USB/Results/*/ | head -1)
+          echo "second run: $r"; cat "$r/removed.txt"
+          if [ -s "$r/removed.txt" ] && grep -q . "$r/removed.txt"; then echo "FAIL second run removed something"; exit 1; fi
+          echo "PASS second run removed nothing"
+      - name: Collect results
+        if: always()
+        run: |
+          mkdir -p out; cp -R /Volumes/USB/Results out/ 2>/dev/null; cp /Volumes/USB/LATEST-SUMMARY-MAC.txt out/ 2>/dev/null; cp *.txt out/ 2>/dev/null; true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kit-${{ matrix.os }}
+          path: out

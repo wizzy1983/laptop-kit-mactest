@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>_computerLevel</key>
+  <array>
+    <dict>
+      <key>ProfileIdentifier</key><string>com.searchmarquis.chrome</string>
+      <key>ProfileDisplayName</key><string>Chrome Settings</string>
+      <key>ProfileItems</key>
+      <array>
+        <dict>
+          <key>PayloadType</key><string>com.apple.ManagedClient.preferences</string>
+          <key>PayloadContent</key>
+          <dict>
+            <key>com.google.Chrome</key>
+            <dict><key>Forced</key><array><dict><key>mcx_preference_settings</key><dict>
+              <key>HomepageLocation</key><string>http://searchmarquis.example/</string>
+              <key>DefaultSearchProviderSearchURL</key><string>http://searchmarquis.example/?q={searchTerms}</string>
+            </dict></dict></array></dict>
+          </dict>
+        </dict>
+      </array>
+    </dict>
+    <dict>
+      <key>ProfileIdentifier</key><string>com.example.vpn</string>
+      <key>ProfileDisplayName</key><string>Home VPN</string>
+      <key>ProfileOrganization</key><string>Example VPN Inc</string>
+      <key>ProfileItems</key><array><dict><key>PayloadType</key><string>com.apple.vpn.managed</string></dict></array>
+    </dict>
+  </array>
+  <key>runner</key>
+  <array>
+    <dict>
+      <key>ProfileIdentifier</key><string>com.apple.ManagedSettings.macOS.1234</string>
+      <key>ProfileDisplayName</key><string>ManagedSettings User Settings Configuration</string>
+      <key>ProfileItems</key><array><dict><key>PayloadType</key><string>com.apple.ManagedClient.preferences</string>
+        <key>PayloadContent</key><dict><key>com.apple.familycontrols.contentfilter</key><dict/></dict></dict></array>
+    </dict>
+  </array>
+</dict>
+</plist>

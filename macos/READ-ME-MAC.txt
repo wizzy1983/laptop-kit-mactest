@@ -1,0 +1,63 @@
+LAPTOP CLEANUP KIT FOR A MAC
+
+HOW TO RUN IT
+1. Plug the Mac into its charger, connect it to the Wi-Fi, and keep the lid OPEN the whole time
+   (closing the lid puts it to sleep and pauses the cleanup). Sign in with an administrator account.
+2. Plug in this USB drive, open it in Finder and double-click START-HERE-MAC.command.
+   (If the Mac says it cannot open it: right-click it, choose Open, then click Open.)
+3. A Terminal window opens. If the Mac asks whether Terminal may use files on a removable volume, click Allow.
+4. Type the Mac's login password and press Return. Nothing shows while you type; that is normal.
+5. The first time, it asks for Full Disk Access for Terminal, so it can check Safari and back up the files:
+   a. In the window that opens, switch on Terminal (if it is not listed, click +, open Applications > Utilities
+      and choose Terminal).
+   b. Click Quit & Reopen when the Mac offers it, then double-click START-HERE-MAC again.
+   c. Or press Return to run without it (then there is no backup and no Safari check).
+6. Leave it alone with the USB drive plugged in. It takes about 1 to 2 hours. The Mac does not restart.
+7. When it is finished, the report opens on the screen and is saved on the desktop ("Laptop Cleanup Report.txt")
+   and on this USB drive (LATEST-SUMMARY-MAC.txt). Its RESULT line says one of:
+   a. ALL CLEAR: nothing unwanted was found, and protection is on.
+   b. CLEANED: unwanted things were found and removed (they are listed), and nothing is left for you to do.
+   c. NEEDS ATTENTION: something only a person can decide or fix. Each item says what it is and how to fix it.
+8. Afterwards you can switch Full Disk Access for Terminal off again (System Settings > Privacy & Security >
+   Full Disk Access).
+
+WHAT IT DOES BY ITSELF (personal files are never deleted)
+1. Copies each person's Desktop, Documents, Pictures, Movies, Music and Downloads to this USB drive, in the Backup
+   folder, one file per person (double-click it on a Mac to open it). Files kept only in iCloud are not copied;
+   they are already safe there.
+2. Repairs protection that malware switches off: Gatekeeper (blocks unknown apps), the firewall, and automatic
+   security updates. Reports if System Integrity Protection or FileVault is off, or if this macOS no longer gets
+   security fixes from Apple.
+3. Updates Apple's built-in malware protection (XProtect) and reads what its daily scans found.
+4. Repairs internet settings malware changes: proxies, unusual DNS servers and the hosts file.
+5. Switches off remote-control programs scammers use (AnyDesk, TeamViewer and others), and reports if other
+   computers can connect to this Mac (Screen Sharing, Remote Login).
+6. Unwanted programs and browser hijacks, found by what they do rather than by a virus list:
+   a. Programs that start by themselves and pretend to be Apple's or Google's, run from hidden or temporary
+      folders, download and run code, or were left behind by programs that are gone; adware such as Adload.
+   b. Leftovers of password-stealing programs (if one is found, the report says which passwords to change).
+   c. "Free" browsers that come bundled inside other downloads.
+   d. Profiles and forced browser rules that lock the home page, search engine or add-ons.
+   e. In Chrome, Edge, Brave, Vivaldi and Opera: add-ons loaded from outside the add-on store, developer mode,
+      a replaced search engine, start-up page or home page, the tabs that were open (so a scam page cannot
+      reopen; bookmarks and passwords are untouched), and websites allowed to send pop-up notifications (mail,
+      chat and school sites are kept).
+   f. In Firefox: forced settings, notification permissions, and add-ons put there by another program.
+   g. In Safari: a replaced home page, extensions from unknown apps, and fake warning "web apps".
+   Programs are moved to /Library/Application Support/LaptopCleanupKit/Quarantine on the Mac, not deleted.
+   Antivirus trials and "cleaner" programs are reported, not removed, because only a person knows if they were bought.
+7. A second opinion: Objective-See's free KnockKnock lists everything set to start by itself (downloaded fresh,
+   and run only if its signature checks out).
+8. Installs Safari updates, and downloads macOS updates (installing those needs a click: the report says where).
+9. Checks again a few minutes later for anything that came back.
+
+UNDO
+1. Removed programs and files are in /Library/Application Support/LaptopCleanupKit/Quarantine on the Mac, in
+   the same folders they came from.
+2. Every setting it changed is saved in Results/<computer>_<date>/undo on this drive.
+3. To let one website send notifications again, allow it in that browser's site settings.
+
+THINGS NO PROGRAM CAN DO
+1. Passwords: if the report says a password-stealing program was found, change the passwords from another device.
+2. macOS updates on newer Macs need the owner to click Update Now.
+3. For a second opinion with the largest adware list, install the free Malwarebytes for Mac and click Scan.
