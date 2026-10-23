@@ -130,7 +130,7 @@ fi
 for db in /var/protected/xprotect/db/XPdb /var/protected/xprotect/XPdb; do
   [[ -e $db ]] || continue
   ev=$(sqlite3 -readonly "$db" "select datetime(dt,'unixepoch'), violated_rule, exec_path, exec_team_id, exec_is_notarized from events where violated_rule not like '%Unsigned%' order by dt desc limit 200" 2>/dev/null)
-  [[ -n $ev ]] && { print -r -- "$ev" > "$WORK/xprotect-behaviour.txt"; fyi "Apple's behaviour monitor logged $(print -r -- "$ev" | wc -l | tr -d ' ') events (xprotect-behaviour.txt)." }
+  [[ -n $ev ]] && { print -r -- "$ev" > "$WORK/xprotect-behaviour.txt"; nev=$(print -r -- "$ev" | wc -l | tr -d ' '); fyi "Apple's behaviour monitor logged $nev event$( (( nev == 1 )) || print s) (xprotect-behaviour.txt)." }
   break
 done
 

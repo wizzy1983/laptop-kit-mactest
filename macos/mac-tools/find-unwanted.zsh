@@ -352,7 +352,8 @@ check_chromium() {
           R) removed "$v";;
           A) attention "$v";;
           N) note "$v";;
-          Q) quarantine "$v" >/dev/null || attention "Could not move away the add-on folder $v";;
+          Q) [[ -e $v || -L $v ]] || continue   # already moved away for another browser that used the same folder
+             quarantine "$v" >/dev/null || attention "Could not move away the add-on folder $v";;
           X) xids+=("$v");;
           *) [[ -n $line ]] && attention "$label could not be checked: $line";;
         esac

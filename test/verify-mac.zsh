@@ -101,7 +101,7 @@ inrep "PASSWORD-STEALING PROGRAM"; inrep "Wave Browser"; inrep "SwitcherGuard"; 
 inrep "downloads and runs code"; inrep "no longer there"; inrep "Remote-control programs switched off"; inrep "MacKeeper"; inrep "Norton 360"
 inrep "Search Pro"; inrep "scam-alert.example"; inrep "news-alerts.example"; inrep "Safari"; inrep "Search Helper"; inrep "www.bing.com"
 notrep "Came back"; notrep "could not be checked"; notrep "PROBLEM"; notrep "Notes Helper\" is a web browser"
-notrep "family.backup (" ; notrep "keystone.xpcservice"
+notrep "family.backup (" ; notrep "keystone.xpcservice"; notrep "Could not move away"; notrep "1 events"
 ok "backup holds the planted document" "tar -tf \"\$(ls -d \"$VOL\"/Backup/*/$(id -un).tar | head -1)\" | grep -q 'Documents/kit-backup-test.txt'"
 ok "no ._ files left on the drive" "[[ -z \$(find \"$VOL\" -name '._*' | head -1) ]]"
 
