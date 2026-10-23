@@ -5,7 +5,7 @@
 # Research behind each step: research/2026-10-23-mac-*.md. KIT_TEST=1 (GitHub tests only) skips the slow downloads,
 # the backup size limit and opening the report on screen.
 emulate -L zsh
-setopt no_nomatch extended_glob
+setopt no_nomatch extended_glob typeset_silent
 export PATH=/usr/bin:/bin:/usr/sbin:/sbin:/usr/libexec
 umask 022
 

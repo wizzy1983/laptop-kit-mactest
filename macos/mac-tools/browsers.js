@@ -117,7 +117,8 @@ function writeText(p, text) {
     sh('/usr/sbin/chown ' + owner[0] + ':' + owner[1] + ' ' + q(p) + ' && /bin/chmod ' + owner[2] + ' ' + q(p));
 }
 function backup(p, undo, tag) {
-    sh('/bin/mkdir -p ' + q(undo) + ' && /bin/cp -p ' + q(p) + ' ' + q(undo + '/' + tag + '-' + Date.now()));
+    // No -p: the undo folder is on the exFAT USB drive, which cannot store owners, and cp -p would fail there.
+    sh('/bin/mkdir -p ' + q(undo) + ' && /bin/cp ' + q(p) + ' ' + q(undo + '/' + tag + '-' + Date.now()));
 }
 function listDirs(p) {
     const a = $.NSFileManager.defaultManager.contentsOfDirectoryAtPathError(p, null);
@@ -294,7 +295,7 @@ function run(argv) {
         if (saved.length) {
             const dest = undo + '/open-tabs-' + tag + '-' + Date.now();
             sh('/bin/mkdir -p ' + q(dest));
-            for (const s of saved) sh('/bin/cp -Rp ' + q(dir + '/' + s) + ' ' + q(dest + '/') + ' && /bin/rm -rf ' + q(dir + '/' + s));
+            for (const s of saved) sh('/bin/cp -R ' + q(dir + '/' + s) + ' ' + q(dest + '/') + ' && /bin/rm -rf ' + q(dir + '/' + s));
             N(label + ': the tabs that were open will not reopen, so a scam page cannot come back (they were moved to the undo folder; bookmarks are untouched).');
         }
         const p = getPath(docs[plain], ['profile']);

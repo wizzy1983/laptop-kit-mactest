@@ -38,6 +38,7 @@ jobs:
           bash mac/copy-to-usb.sh /Volumes/USB | tee copy.txt
           test "$(grep -c '^OK ' copy.txt)" = 13
       - name: Plant what the kit must remove and what it must keep
+        timeout-minutes: 10
         run: zsh test/plant-mac.zsh 2>&1 | tee plant.txt
       - name: Run the kit from the drive (as a person would, minus the double-click)
         id: kit

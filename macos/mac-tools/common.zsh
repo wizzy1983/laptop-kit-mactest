@@ -39,7 +39,7 @@ quarantine() {
 save_undo() {
   [[ -e $1 ]] || return 0
   /bin/mkdir -p "$UNDO"
-  /bin/cp -p "$1" "$UNDO/${${1#/}//\//_}-$(date +%H%M%S)" 2>>"$LOG"
+  /bin/cp "$1" "$UNDO/${${1#/}//\//_}-$(date +%H%M%S)" 2>>"$LOG"   # no -p: the drive is exFAT
 }
 
 # Full Disk Access for Terminal (root alone is not enough): this file can only be read with it.

@@ -147,13 +147,13 @@ check_launch_items() {
         why="adware (Adload service/system pair)"
       fi
       if [[ -z $why ]] && matches "$DownloadRun" "${args[*]}"; then why="downloads and runs code from the internet"; fi
+      if [[ -z $why && $SIG_KIND == missing && $target == /* && $target != /Volumes/* ]] && ! matches "$Interpreters" "${target:t}"; then
+        why="left behind by a program that is no longer there"
+      fi
       if [[ -z $why ]] && [[ " ${args[*]} " == *" --wake "* ]] && ! { [[ $SIG_KIND == team ]] && matches "^($BrowserTeams)$" "$SIG_TEAM" }; then
         why="an updater copied from a browser maker's but not signed by one (comes with bundled browsers)"
       fi
       if [[ -z $why ]] && matches "$PupNames" "$label $ip $prog"; then why="part of a bundled unwanted program"; fi
-      if [[ -z $why && $SIG_KIND == missing && $target == /* && $target != /Volumes/* ]] && ! matches "$Interpreters" "${target:t}"; then
-        why="left behind by a program that is no longer there"
-      fi
       if [[ -n $why ]]; then
         [[ $SIG_KIND != missing && $why != *"no longer there"* ]] && root=$(removal_root "$target")
         [[ $root == /System/* || $root == /usr/* || $root == /bin/* || $root == /sbin/* ]] && root=
@@ -391,7 +391,7 @@ check_firefox() {
     for p in "$h/Library/Application Support/Firefox/Profiles"/*(N/); do
       f="$p/user.js"
       if [[ -f $f ]] && grep -E 'browser\.(startup\.homepage|search|newtab|newtabpage)' "$f" | grep -qvE "https?://([a-z0-9-]+\.)*(google\.[a-z.]+|bing\.com|duckduckgo\.com|mozilla\.org|yahoo\.com)"; then
-        if [[ $fix == fix ]]; then cp -p "$f" "$UNDO/firefox-user.js-$u-${p:t}"; mv "$f" "$f.kit-disabled" && removed "Firefox ($u): user.js that forced the home page or search engine (renamed user.js.kit-disabled)"
+        if [[ $fix == fix ]]; then cp "$f" "$UNDO/firefox-user.js-$u-${p:t}"; mv "$f" "$f.kit-disabled" && removed "Firefox ($u): user.js that forced the home page or search engine (renamed user.js.kit-disabled)"
         else attention "Firefox ($u): user.js forces the home page or search engine."; fi
       fi
       f="$p/extensions.json"
@@ -408,7 +408,7 @@ check_firefox() {
         done
         if (( ${#bad} )); then
           if [[ $fix == fix ]]; then
-            cp -p "$f" "$UNDO/firefox-permissions-$u-${p:t}.sqlite"
+            cp "$f" "$UNDO/firefox-permissions-$u-${p:t}.sqlite"
             for origin in $bad; do sqlite3 "$f" "delete from moz_perms where type='desktop-notification' and permission=1 and origin='${origin//\'/''}'" 2>>"$LOG"; done
             removed "Firefox ($u): pop-up notifications from ${(j:, :)bad}"
           else attention "Firefox ($u): these websites may send pop-up notifications: ${(j:, :)bad}"; fi

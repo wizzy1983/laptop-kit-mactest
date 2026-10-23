@@ -34,14 +34,14 @@ EOF
 # 1. Bundled browser in her own Applications folder, running, with an updater (--wake) that starts by itself.
 fakeapp "$H/Applications/Wave Browser.app" "Wave Browser" com.wavebrowser.browser 1 "Wave Framework.framework"
 agent "$H/Library/LaunchAgents/com.wavebrowser.update.plist" com.wavebrowser.update "$H/Applications/Wave Browser.app/Contents/MacOS/Wave Browser" --wake
-("$H/Applications/Wave Browser.app/Contents/MacOS/Wave Browser" 7200 &) ; log "Wave Browser (running) + --wake updater"
+("$H/Applications/Wave Browser.app/Contents/MacOS/Wave Browser" 7200 </dev/null >/dev/null 2>&1 &) ; log "Wave Browser (running) + --wake updater"
 # 2. Adload, 2021 shape: hidden numbered folder, .service agent + .system daemon, agent loaded and running.
 AD="$AS/.3276169528277499560/Services/com.SwitcherGuard.service"; mkdir -p "$AD"; macho "$AD/SwitcherGuard.service"
 agent "$H/Library/LaunchAgents/com.SwitcherGuard.service.plist" com.SwitcherGuard.service "$AD/SwitcherGuard.service"
 sudo mkdir -p "/Library/Application Support/.3276169528277499560/System"; sudo cp "$AD/SwitcherGuard.service" "/Library/Application Support/.3276169528277499560/System/SwitcherGuard.system"
 agent /tmp/sys.plist com.SwitcherGuard.system "/Library/Application Support/.3276169528277499560/System/SwitcherGuard.system"; sudo cp /tmp/sys.plist /Library/LaunchDaemons/com.SwitcherGuard.system.plist
 cp /bin/sleep "$AD/SwitcherGuard.service"; codesign -s - --force "$AD/SwitcherGuard.service" 2>/dev/null
-("$AD/SwitcherGuard.service" 7200 &); log "Adload service/system pair (running)"
+("$AD/SwitcherGuard.service" 7200 </dev/null >/dev/null 2>&1 &); log "Adload service/system pair (running)"
 # 3. Adload SearchQuest shape + a crontab line that starts it, and a crontab line to KEEP.
 mkdir -p "$AS/com.SearchQuest"; macho "$AS/com.SearchQuest/SearchQuest"
 agent "$H/Library/LaunchAgents/com.SearchQuest.plist" com.SearchQuest "$AS/com.SearchQuest/SearchQuest"
