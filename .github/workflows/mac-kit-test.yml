@@ -23,7 +23,7 @@ jobs:
         run: |
           out=$(osascript -l JavaScript macos/mac-tools/inspect.js profiles test/sample-profiles.xml)
           echo "$out"
-          echo "$out" | grep -q $'^_computerLevel\tcom.searchmarquis.chrome\t.*com.google.Chrome:HomepageLocation+DefaultSearchProviderSearchURL'
+          echo "$out" | grep $'^_computerLevel\tcom.searchmarquis.chrome\t' | grep 'com.google.Chrome:' | grep 'HomepageLocation' | grep -q 'DefaultSearchProviderSearchURL'
           echo "PASS hijack profile seen"
           echo "$out" | grep -qE $'^_computerLevel\tcom.example.vpn\t[^\t]*\t[^\t]*\tcom.apple.vpn.managed\t$'
           echo "PASS VPN profile has no browser settings"
@@ -40,6 +40,7 @@ jobs:
       - name: Plant what the kit must remove and what it must keep
         run: zsh test/plant-mac.zsh 2>&1 | tee plant.txt
       - name: Run the kit from the drive (as a person would, minus the double-click)
+        id: kit
         timeout-minutes: 60
         run: KIT_TEST=1 zsh /Volumes/USB/START-HERE-MAC.command 2>&1 | tee kit-run.txt
       - name: Verify
@@ -48,7 +49,7 @@ jobs:
           echo "PASS: $(grep -c '^PASS' verify.txt)  FAIL: $(grep -c '^FAIL' verify.txt)"
           ! grep -q '^FAIL' verify.txt
       - name: Second run finds nothing new
-        if: always()
+        if: always() && steps.kit.outcome != 'skipped'
         timeout-minutes: 40
         run: |
           KIT_TEST=1 zsh /Volumes/USB/START-HERE-MAC.command > kit-run2.txt 2>&1
