@@ -59,7 +59,7 @@ launch_target() {
 removal_root() {
   local p=$1 r
   if [[ $p == *.app/* ]]; then r=${p%%.app/*}.app
-  elif [[ $p =~ '^(/Users/[^/]+|)/Library/Application Support/[^/]+' ]]; then r=$MATCH
+  elif [[ $p =~ '^(/Users/[^/]+)?/Library/Application Support/[^/]+' ]]; then r=$MATCH
   elif [[ $p =~ '^/Users/[^/]+/\.[^/]+' ]]; then r=$MATCH
   elif [[ $p =~ '^/var/root/\.[^/]+' || $p =~ '^/private/var/root/\.[^/]+' ]]; then r=$MATCH
   else r=$p; fi
@@ -295,21 +295,17 @@ check_policies() {
   for l in $USERS; do places+=("${l#* }/Library/Preferences"); done
   for file in ${^places}/${^domains}.plist(N); do
     dom=${file:t:r}
-    [[ $dom == org.mozilla.firefox ]] && keys="$FirefoxPolicyKeys|^EnterprisePoliciesEnabled$" || keys=$PolicyKeys
-    local found=$(osascript -l JavaScript "$TOOLS/inspect.js" policy "$file" "$keys" 2>>"$LOG")
+    [[ $dom == org.mozilla.firefox ]] && keys=$FirefoxPolicyKeys || keys=$PolicyKeys
+    # Firefox's EnterprisePoliciesEnabled switch is left alone: by itself it forces nothing.
+    local found=$(osascript -l JavaScript "$TOOLS/inspect.js" policy "$file" "$keys" 2>>"$LOG" | grep -v '^EnterprisePoliciesEnabled')
     [[ -n $found ]] || continue
     if [[ $fix == fix && $MDM == 0 ]]; then
       save_undo "$file"
       u=$(stat -f %Su "$file")
       for key in ${(f)"$(print -r -- "$found" | cut -f1)"}; do
-        [[ $key == EnterprisePoliciesEnabled ]] && continue
         if [[ $file == /Library/* ]]; then defaults delete "${file:r}" "$key" 2>>"$LOG"; else as_user "$u" defaults delete "$dom" "$key" 2>>"$LOG"; fi
       done
-      if [[ $dom == org.mozilla.firefox ]]; then
-        local rest=$(osascript -l JavaScript "$TOOLS/inspect.js" policy "$file" '.' 2>/dev/null | cut -f1 | grep -v '^EnterprisePoliciesEnabled$')
-        [[ -z $rest ]] && { [[ $file == /Library/* ]] && defaults delete "${file:r}" EnterprisePoliciesEnabled 2>/dev/null || as_user "$u" defaults delete "$dom" EnterprisePoliciesEnabled 2>/dev/null }
-      fi
-      removed "Browser rules forced in $file: ${(j:, :)${(f)$(print -r -- "$found" | grep -v '^EnterprisePoliciesEnabled' | cut -f1)}}"
+      removed "Browser rules forced in $file: ${(j:, :)${(f)$(print -r -- "$found" | cut -f1)}}"
     else
       attention "Browser rules are forced in $file: ${(j:, :)${(f)$(print -r -- "$found" | cut -f1)}}"
     fi
@@ -500,7 +496,9 @@ knockknock_check() {
   fi
   limit 900 "$app/Contents/MacOS/KnockKnock" -whosthere -skipVT > "$dir/knockknock.json" 2> "$dir/errors.txt"
   if grep -q 'Full Disk Access' "$dir/errors.txt"; then fyi "KnockKnock refused to run without Full Disk Access."; return; fi
-  local out=$(osascript -l JavaScript -e 'function run(a){var t=$.NSString.stringWithContentsOfFileEncodingError(a[0],4,null);if(t.isNil())return "";t=t.js;var i=t.indexOf("{");if(i<0)return "";var j=JSON.parse(t.slice(i)),o=[],n=0;Object.keys(j).forEach(function(k){(j[k]||[]).forEach(function(x){n++;var s=JSON.stringify(x.signature||x.signatures||"");if(/not signed|unsigned|adhoc|errSecCSUnsigned|"signatureStatus":-67062/i.test(s)||s===""||s==="\"\"")o.push(k+"\t"+(x.name||"")+"\t"+(x.path||x.identifier||""))})});return n+"\n"+o.join("\n")}' "$dir/knockknock.json" 2>>"$LOG")
+  # KnockKnock 4.1 JSON (measured on macOS 14-26, 2026-10-23): "signature(s)" = {signatureStatus: 0 when valid, -67062
+  # when unsigned; signatureAuthorities: the signer chain, empty for ad-hoc}. Cron jobs and shell files have none.
+  local out=$(osascript -l JavaScript -e 'function run(a){var t=$.NSString.stringWithContentsOfFileEncodingError(a[0],4,null);if(t.isNil())return "";t=t.js;var i=t.indexOf("{");if(i<0)return "";var j=JSON.parse(t.slice(i)),o=[],n=0,seen={};Object.keys(j).forEach(function(k){(j[k]||[]).forEach(function(x){n++;if(!x.path||seen[x.path]||/^(Cron Jobs|Shell Configuration Files)$/.test(k)||/^\/(private\/)?etc\/(defaults|periodic)\//.test(x.path))return;seen[x.path]=1;var s=x["signature(s)"]||{};if(s.signatureStatus!==0||!(s.signatureAuthorities||[]).length)o.push(k+"\t"+(x.name||"")+"\t"+x.path)})});return n+"\n"+o.join("\n")}' "$dir/knockknock.json" 2>>"$LOG")
   local total=${${(f)out}[1]}
   say "  KnockKnock listed ${total:-0} items that start by themselves; unsigned ones:"
   local cat name kp

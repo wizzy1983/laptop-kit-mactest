@@ -165,12 +165,24 @@ repair_network() {
       removed "Unusual DNS servers on $svc (${(j:, :)${(f)dns}}); it uses the network's own again"
     fi
   done
-  local hosts=/etc/hosts extra
-  extra=$(grep -vE '^[[:space:]]*(#|$)' $hosts | grep -vE '^[[:space:]]*(127\.0\.0\.1|255\.255\.255\.255|::1|fe80::1%lo0)[[:space:]]+(localhost|broadcasthost)[[:space:]]*$')
-  if [[ -n $extra ]]; then
+  # A hosts line stays when it is a comment, macOS's own default, or names only this Mac itself (its own name is often
+  # listed there); any other line points a website somewhere else and is disabled. BSD sed cannot do this on one line.
+  local hosts=/etc/hosts line out="" n; local -i keep; local -a extra
+  local -a me=(localhost broadcasthost ${(L)"$(hostname -s)"} ${(L)"$(hostname -s)"}.local ${(L)"$(hostname)"} ${(L)"$(scutil --get LocalHostName 2>/dev/null)"}.local)
+  while IFS= read -r line || [[ -n $line ]]; do
+    keep=1
+    if [[ $line != [[:space:]]#(\#*|) ]]; then
+      for n in ${${=line}[2,-1]}; do [[ $n == \#* ]] && break; (( ${me[(Ie)${(L)n}]} )) || { keep=0; break }; done
+    fi
+    if (( keep )); then out+="$line"$'\n'; else extra+=("$line"); out+="# removed by Laptop Cleanup Kit: $line"$'\n'; fi
+  done < $hosts
+  if (( $#extra )); then
     save_undo $hosts
-    sed -i '' -E '/^[[:space:]]*(#|$)/b; /^[[:space:]]*(127\.0\.0\.1|255\.255\.255\.255|::1|fe80::1%lo0)[[:space:]]+(localhost|broadcasthost)[[:space:]]*$/b; s/^/# removed by Laptop Cleanup Kit: /' $hosts
-    removed "Lines in the hosts file that redirect websites: ${(j:; :)${(f)extra}}"
+    if print -rn -- "$out" > $hosts; then
+      removed "Lines in the hosts file that redirect websites: ${(j:; :)extra}"
+    else
+      problem "The hosts file could not be changed; these lines still redirect websites: ${(j:; :)extra}"
+    fi
     dscacheutil -flushcache; killall -HUP mDNSResponder 2>/dev/null
   fi
 }
@@ -209,9 +221,12 @@ fi
 step "10. Checking again for anything that came back"
 [[ $TEST == 1 ]] && pause=${KIT_RECHECK_WAIT:-60} || pause=180
 sleep $pause
-typeset -a firstRemoved=("${Removed[@]}"); Removed=()
+# The second pass only looks for things that came back; what it says again about everything else is not repeated.
+typeset -a firstRemoved=("${Removed[@]}") firstAttention=("${Attention[@]}") firstFyi=("${Fyi[@]}") firstNotes=("${Notes[@]}")
+Removed=()
 unwanted_cleanup fix
 cameBack=("${Removed[@]}"); Removed=("${firstRemoved[@]}")
+Attention=("${firstAttention[@]}"); Fyi=("${firstFyi[@]}"); Notes=("${firstNotes[@]}")
 for c in $cameBack; do attention "Came back after being removed, and was removed again: $c. Something on the Mac keeps putting it back; ask for help."; done
 
 # ---------------------------------------------------------------- Report

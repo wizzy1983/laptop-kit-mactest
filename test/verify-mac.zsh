@@ -7,10 +7,11 @@ Q="/Library/Application Support/LaptopCleanupKit/Quarantine"
 REPORT="$VOL/LATEST-SUMMARY-MAC.txt"
 pass=0; fail=0
 ok()   { if eval "$2"; then print "PASS $1"; ((pass++)); else print "FAIL $1"; ((fail++)); fi }
-gone() { ok "gone: $1" "[[ ! -e \"$1\" ]]" }
-kept() { ok "kept: $1" "[[ -e \"$1\" ]]" }
-inrep(){ ok "report says: $1" "grep -qiF -- \"$1\" \"$REPORT\"" }
-notrep(){ ok "report does not say: $1" "! grep -qiF -- \"$1\" \"$REPORT\"" }
+res()  { if (( $2 == 0 )); then print "PASS $1"; ((pass++)); else print "FAIL $1"; ((fail++)); fi }
+gone() { [[ ! -e $1 ]]; res "gone: $1" $?; [[ -e $1 && $1 == *.plist ]] && plutil -p "$1" | head -20 }
+kept() { [[ -e $1 ]]; res "kept: $1" $? }
+inrep(){ grep -qiF -- "$1" "$REPORT"; res "report says: $1" $? }
+notrep(){ ! grep -qiF -- "$1" "$REPORT"; res "report does not say: $1" $? }
 
 print "== removed"
 gone "$H/Applications/Wave Browser.app"; gone "$H/Library/LaunchAgents/com.wavebrowser.update.plist"
@@ -22,7 +23,7 @@ gone "$AS/com.SearchQuest"; gone "$H/Library/LaunchAgents/com.SearchQuest.plist"
 ok "crontab line for SearchQuest removed" "! crontab -l 2>/dev/null | grep -q SearchQuest"
 gone "$H/.mainhelper"; gone "$H/.agent"; gone "$H/.pwd"; gone /Library/LaunchDaemons/com.finder.helper.plist
 gone "$H/Library/LaunchAgents/com.apple.updates.agent.plist"
-gone "$H/Library/LaunchAgents/com.google.keystone.agent.plist"; gone "$AS/Google/GoogleUpdate.app"
+gone "$H/Library/LaunchAgents/com.google.update.agent.plist"; gone "$AS/Google/GoogleUpdate.app"
 gone /Library/LaunchDaemons/com.system.maintenance.plist; gone "$H/Library/LaunchAgents/com.pulsebrowser.updater.plist"
 gone /Library/LaunchAgents/com.teamviewer.teamviewer.plist
 gone "$H/Applications/Security Alert.app"
@@ -59,7 +60,8 @@ p = json.load(open(os.path.join(C, 'Preferences'))); s = json.load(open(os.path.
 raw = open(os.path.join(C, 'Secure Preferences')).read()
 both = lambda *k: [g(p, *k), g(s, *k)]
 chk('Chrome: SearchProtect add-on removed', all(x is None for x in both('extensions', 'settings', 'jnannpdmmiphnkpaooplhegabbghlplj')))
-chk('Chrome: Docs Offline (store add-on) kept', g(s, 'extensions', 'settings', 'ghbmnnjooekpmoecnnnilnnbdlolhkhi') is not None)
+chk('Chrome: Docs Offline was installed by Chrome itself before the kit ran', os.path.exists('/tmp/kit-docs-offline-installed'))
+chk('Chrome: Docs Offline (store add-on) kept', any(x is not None for x in both('extensions', 'settings', 'ghbmnnjooekpmoecnnnilnnbdlolhkhi')))
 chk('Chrome: number 0.0 kept exactly as written', '"kit_float_probe":0.0' in raw)
 chk('Chrome: developer mode off', all(x is None for x in both('extensions', 'ui', 'developer_mode')))
 chk('Chrome: search engine reset', all(x is None for x in both('default_search_provider_data')) and all(x is None for x in both('default_search_provider', 'guid')))
@@ -93,6 +95,7 @@ PY
 
 print "== report"
 ok "report exists on the drive" "[[ -s \"$REPORT\" ]]"
+dups=$(sed -nE 's/^[0-9]+\. //p' "$REPORT" | sort | uniq -d); [[ -z $dups ]]; res "report repeats no item" $?; [[ -n $dups ]] && print -r -- "$dups" | head -5
 inrep "RESULT: NEEDS ATTENTION"
 inrep "PASSWORD-STEALING PROGRAM"; inrep "Wave Browser"; inrep "SwitcherGuard"; inrep "pretends to be Apple"; inrep "uses the name of com.google"
 inrep "downloads and runs code"; inrep "no longer there"; inrep "Remote-control programs switched off"; inrep "MacKeeper"; inrep "Norton 360"
@@ -114,7 +117,7 @@ import json, os, sys
 C = os.path.join(sys.argv[1], 'Google/Chrome/Default')
 s = json.load(open(os.path.join(C, 'Secure Preferences'))); p = json.load(open(os.path.join(C, 'Preferences')))
 reset = json.dumps(s.get('prefs', {}).get('tracked_preferences_reset', [])) + json.dumps(p.get('prefs', {}).get('tracked_preferences_reset', []))
-print(('PASS ' if 'ghbmnnjooekpmoecnnnilnnbdlolhkhi' in json.dumps(s.get('extensions', {}).get('settings', {})) else 'FAIL ') + 'Chrome after restart: Docs Offline add-on still there')
+print(('PASS ' if 'ghbmnnjooekpmoecnnnilnnbdlolhkhi' in json.dumps(s.get('extensions', {}).get('settings', {})) + json.dumps(p.get('extensions', {}).get('settings', {})) else 'FAIL ') + 'Chrome after restart: Docs Offline add-on still there')
 print(('PASS ' if 'ghbmnnjooekpmoecnnnilnnbdlolhkhi' not in reset else 'FAIL ') + 'Chrome after restart: did not reset the kept add-on (' + reset[:200] + ')')
 print(('PASS ' if 'searchpro' not in json.dumps(s).lower() + json.dumps(p).lower() else 'FAIL ') + 'Chrome after restart: Search Pro did not come back')
 PY

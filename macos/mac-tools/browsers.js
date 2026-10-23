@@ -263,7 +263,7 @@ function run(argv) {
                     backup(webData, undo, 'WebData-' + tag);
                     sh('/usr/bin/sqlite3 ' + q(webData) + ' "DELETE FROM keywords WHERE id = ' + Number(r[0]) + '"');
                     if (isDefault) drop(['default_search_provider']);
-                    R(label + ': search engine ' + what + " (set back to the browser's normal one)");
+                    R(label + ': search engine ' + what + ' removed from its list of search engines' + (isDefault ? " (set back to the browser's normal one)" : ''));
                 } else A(label + ': the search engine is ' + what + '.');
             }
         } catch (e) {

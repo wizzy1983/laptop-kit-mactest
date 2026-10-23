@@ -55,7 +55,8 @@ log "stealer leftovers"
 mkdir -p "$AS/AppleUpdates"; print '#!/bin/sh\nexit 0' > "$AS/AppleUpdates/updater"; chmod +x "$AS/AppleUpdates/updater"
 agent "$H/Library/LaunchAgents/com.apple.updates.agent.plist" com.apple.updates.agent /bin/sh "$AS/AppleUpdates/updater"
 fakeapp "$AS/Google/GoogleUpdate.app" GoogleUpdate com.google.GoogleUpdate 0 ""
-agent "$H/Library/LaunchAgents/com.google.keystone.agent.plist" com.google.keystone.agent "$AS/Google/GoogleUpdate.app/Contents/MacOS/GoogleUpdate"
+# (not com.google.keystone.*: Google's real updater, started with Chrome below, takes over files with that name)
+agent "$H/Library/LaunchAgents/com.google.update.agent.plist" com.google.update.agent "$AS/Google/GoogleUpdate.app/Contents/MacOS/GoogleUpdate"
 print '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict/></plist>' > /tmp/empty.plist; sudo cp /tmp/empty.plist /Library/LaunchAgents/com.google.keystone.xpcservice.plist
 log "Apple/Google impersonation + KEEP empty Google placeholder"
 # 7. Downloads and runs code; 8. left behind by a removed program (Pulse); 9. remote control (TeamViewer).
@@ -92,12 +93,21 @@ defaults write com.apple.Safari HomePage -string "http://scam-home.example/" && 
 mkdir -p "$H/Documents"; print "family letter" > "$H/Documents/kit-backup-test.txt"
 
 # 15. Browser profiles: start Chrome and Edge once so they create real profiles, then plant the hijacks.
-for b in "Google Chrome" "Microsoft Edge"; do
-  "/Applications/$b.app/Contents/MacOS/$b" --no-first-run --no-default-browser-check --use-mock-keychain about:blank >/dev/null 2>&1 &
-done
-sleep 25; pkill -TERM -x "Google Chrome"; pkill -TERM -x "Microsoft Edge"; sleep 8; pkill -KILL -x "Google Chrome"; pkill -KILL -x "Microsoft Edge"; sleep 2
-mkdir -p "$AS/SearchProtectExt"; print '{"name":"SearchProtect","version":"1.0","manifest_version":3,"chrome_settings_overrides":{"search_provider":{"search_url":"https://searchpro.example/?q={searchTerms}"}}}' > "$AS/SearchProtectExt/manifest.json"
+# KEEP: Docs Offline is installed by Chrome itself from the store (a store install instruction), so Chrome writes its
+# checksum; an entry written by hand has none and Chrome resets it on the next start whatever the kit does.
 mkdir -p "$AS/Google/Chrome/External Extensions"
+print '{"external_update_url":"https://clients2.google.com/service/update2/crx"}' > "$AS/Google/Chrome/External Extensions/ghbmnnjooekpmoecnnnilnnbdlolhkhi.json"
+for b in "Google Chrome" "Microsoft Edge"; do
+  "/Applications/$b.app/Contents/MacOS/$b" --no-first-run --no-default-browser-check --use-mock-keychain about:blank </dev/null >/dev/null 2>&1 &
+done
+rm -f /tmp/kit-docs-offline-installed
+for i in {1..18}; do
+  sleep 5
+  grep -qs '"ghbmnnjooekpmoecnnnilnnbdlolhkhi"' "$AS/Google/Chrome/Default/Secure Preferences" "$AS/Google/Chrome/Default/Preferences" && { touch /tmp/kit-docs-offline-installed; break }
+done
+[[ -e /tmp/kit-docs-offline-installed ]] && log "Docs Offline installed by Chrome after $((i*5)) s" || log "WARNING Docs Offline was not installed by Chrome within 90 s"
+sleep 5; pkill -TERM -x "Google Chrome"; pkill -TERM -x "Microsoft Edge"; sleep 8; pkill -KILL -x "Google Chrome"; pkill -KILL -x "Microsoft Edge"; sleep 2
+mkdir -p "$AS/SearchProtectExt"; print '{"name":"SearchProtect","version":"1.0","manifest_version":3,"chrome_settings_overrides":{"search_provider":{"search_url":"https://searchpro.example/?q={searchTerms}"}}}' > "$AS/SearchProtectExt/manifest.json"
 print '{"external_update_url":"https://searchpro.example/update.xml"}' > "$AS/Google/Chrome/External Extensions/jnannpdmmiphnkpaooplhegabbghlplj.json"
 print '{"external_update_url":"https://clients2.google.com/service/update2/crx"}' > "$AS/Google/Chrome/External Extensions/aapbdbdomjkkjkaonfhkkikfgjllcleb.json"
 mkdir -p "$AS/Google/Chrome/Default/Sessions"; print x > "$AS/Google/Chrome/Default/Sessions/Session_13400000000000000"
@@ -119,8 +129,8 @@ for browser, ext_id, ext_name in (('Google/Chrome', 'jnannpdmmiphnkpaooplhegabbg
     put(s, ['extensions', 'ui', 'developer_mode'], True)
     put(s, ['default_search_provider_data', 'template_url_data'], {'short_name': 'Search Pro', 'keyword': 'searchpro', 'url': 'https://searchpro.example/?q={searchTerms}', 'new_tab_url': 'https://searchpro.example/newtab'})
     if browser == 'Google/Chrome':
-        # KEEP: a store add-on; its 0.0 must still read 0.0 afterwards (checksummed values must not change).
-        put(s, ['extensions', 'settings', 'ghbmnnjooekpmoecnnnilnnbdlolhkhi'], {'location': 1, 'from_webstore': True, 'kit_float_probe': 0.0, 'manifest': {'name': 'Google Docs Offline', 'version': '1.9', 'update_url': 'https://clients2.google.com/service/update2/crx'}})
+        # A number written 0.0 must still read 0.0 after the kit rewrites the file (Chrome checksums values as text).
+        put(s, ['kit_float_probe'], 0.0)
         put(s, ['session', 'startup_urls'], ['http://scam-alert.example/'])
         put(s, ['session', 'restore_on_startup'], 4)
         put(s, ['account_values', 'session', 'startup_urls'], ['http://scam-sync.example/'])
